@@ -1,7 +1,9 @@
 package com.example.myapp014amynotehub
 
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.Spinner
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -10,7 +12,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.myapp014amynotehub.databinding.ActivityMainBinding
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,7 +36,7 @@ class MainActivity : AppCompatActivity() {
         database = NoteHubDatabaseInstance.getDatabase(this)
 
         // Vložení výchozích kategorií a štítků do databáze
-        //insertDefaultCategories()
+        insertDefaultCategories()
         //insertDefaultTags()
 
         // Inicializace RecyclerView
@@ -55,6 +61,16 @@ class MainActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_note, null)
         val titleEditText = dialogView.findViewById<EditText>(R.id.editTextTitle)
         val contentEditText = dialogView.findViewById<EditText>(R.id.editTextContent)
+        val spinnerCategory = dialogView.findViewById<Spinner>(R.id.spinnerCategory)
+
+        // Načtení kategorií z databáze a jejich zobrazení ve Spinneru
+        lifecycleScope.launch {
+            val categories = database.categoryDao().getAllCategories().first()  // Načteme kategorie
+            val categoryNames = categories.map { it.name }  // Převedeme na seznam názvů kategorií
+            val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, categoryNames)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spinnerCategory.adapter = adapter
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Přidat poznámku")
@@ -62,7 +78,15 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Přidat") { _, _ ->
                 val title = titleEditText.text.toString()
                 val content = contentEditText.text.toString()
-                addNoteToDatabase(title, content)
+                val selectedCategory = spinnerCategory.selectedItem.toString()  // Získáme vybranou kategorii
+
+                // Najdeme ID vybrané kategorie
+                lifecycleScope.launch {
+                    val category = database.categoryDao().getCategoryByName(selectedCategory)
+                    if (category != null) {
+                        addNoteToDatabase(title, content, category.id)
+                    }
+                }
             }
             .setNegativeButton("Zrušit", null)
             .create()
@@ -70,9 +94,9 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun addNoteToDatabase(title: String, content: String) {
+    private fun addNoteToDatabase(title: String, content: String, categoryId: Int) {
         lifecycleScope.launch {
-            val newNote = Note(title = title, content = content)
+            val newNote = Note(title = title, content = content, categoryId = categoryId)
             database.noteDao().insert(newNote)  // Vloží poznámku do databáze
             loadNotes()  // Aktualizuje seznam poznámek
         }
@@ -82,9 +106,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             database.noteDao().getAllNotes().collect { notes ->
                 noteAdapter = NoteAdapter(
-                    notes,
+                    notes = notes,
                     onDeleteClick = { note -> deleteNote(note) },
-                    onEditClick = { note -> editNote(note) }
+                    onEditClick = { note -> editNote(note) },
+                    lifecycleScope = lifecycleScope,  // Předáváme lifecycleScope
+                    database = database  // Předáváme databázi
                 )
                 binding.recyclerView.adapter = noteAdapter
             }
@@ -122,8 +148,9 @@ class MainActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_note, null)
         val titleEditText = dialogView.findViewById<EditText>(R.id.editTextTitle)
         val contentEditText = dialogView.findViewById<EditText>(R.id.editTextContent)
+        val categorySpinner = dialogView.findViewById<Spinner>(R.id.spinnerCategory)
 
-        // Předvyplnění stávajících dat poznámky
+        // Pre-fill the existing data of the note
         titleEditText.setText(note.title)
         contentEditText.setText(note.content)
 
@@ -134,17 +161,64 @@ class MainActivity : AppCompatActivity() {
                 val updatedTitle = titleEditText.text.toString()
                 val updatedContent = contentEditText.text.toString()
 
-                // Aktualizace poznámky v databázi
                 lifecycleScope.launch {
-                    val updatedNote = note.copy(title = updatedTitle, content = updatedContent)
-                    database.noteDao().update(updatedNote)  // Uloží aktualizovanou poznámku
-                    loadNotes()  // Načte a aktualizuje seznam poznámek
+                    // Collect categories and update the note
+                    database.categoryDao().getAllCategories().collectLatest { categories ->
+                        if (categories.isNotEmpty()) {
+                            val updatedCategory = categories[categorySpinner.selectedItemPosition].id
+
+                            val updatedNote = note.copy(
+                                title = updatedTitle,
+                                content = updatedContent,
+                                categoryId = updatedCategory
+                            )
+                            database.noteDao().update(updatedNote) // Save the updated note
+                            loadNotes() // Reload and refresh the notes list
+                        }
+                    }
                 }
             }
             .setNegativeButton("Zrušit", null)
             .create()
 
         dialog.show()
+
+        // Populate the Spinner asynchronously
+        lifecycleScope.launchWhenStarted {
+            database.categoryDao().getAllCategories().collectLatest { categories ->
+                val categoryAdapter = ArrayAdapter(
+                    this@MainActivity, // Adjust based on your activity or fragment context
+                    android.R.layout.simple_spinner_item,
+                    categories.map { it.name } // Assuming categories have a `name` field
+                )
+                categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                categorySpinner.adapter = categoryAdapter
+
+                // Set the current category in the Spinner
+                val currentCategoryIndex = categories.indexOfFirst { it.id == note.categoryId }
+                if (currentCategoryIndex != -1) {
+                    categorySpinner.setSelection(currentCategoryIndex)
+                }
+            }
+        }
+    }
+
+    private fun insertDefaultCategories() {
+        lifecycleScope.launch {
+            val defaultCategories = listOf(
+                "Osobní",
+                "Práce",
+                "Nápady"
+            )
+
+            for (categoryName in defaultCategories) {
+                val existingCategory = database.categoryDao().getCategoryByName(categoryName)
+                if (existingCategory == null) {
+                    // Kategorie s tímto názvem neexistuje, vložíme ji
+                    database.categoryDao().insert(Category(name = categoryName))
+                }
+            }
+        }
     }
 
 
