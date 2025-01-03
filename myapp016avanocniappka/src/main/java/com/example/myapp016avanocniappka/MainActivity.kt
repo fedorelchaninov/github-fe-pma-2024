@@ -4,7 +4,9 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.LayoutInflater
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.toBitmap
 import org.maplibre.android.MapLibre
+import org.maplibre.android.annotations.IconFactory
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
@@ -68,8 +70,18 @@ class MainActivity : AppCompatActivity() {
                 Triple(LatLng(46.0511, 14.5058), "Dedek Mraz", "Location: Ljubljana, Slovenia"),
                 Triple(LatLng(53.9006, 27.5590), "Дед Мороз (Ded Moroz)", "Location: Minsk, Belarus"),
                 Triple(LatLng(50.4501, 30.5234), "Святий Миколай (Svyatyy Mykolay)", "Location: Kyiv, Ukraine"),
-                Triple(LatLng(37.9838, 23.7275), "Άγιος Βασίλης (Agios Vasilis)", "Location: Athens, Greece")
+                Triple(LatLng(37.9838, 23.7275), "Άγιος Βασίλης (Agios Vasilis)", "Location: Athens, Greece"),
+                Triple(LatLng(52.2297, 21.0122), "Święty Mikołaj", "Location: Warsaw, Poland")
             )
+
+            val infoIconDrawable = ResourcesCompat.getDrawable(
+                this.resources,
+                R.drawable.christmas_hat,
+                null
+            )!!
+
+            val bitmap = infoIconDrawable.toBitmap(width = 30, height = 30)
+            val icon = IconFactory.getInstance(this).fromBitmap(bitmap)
 
             for (location in santaLocations) {
                 maplibreMap.addMarker(
@@ -77,17 +89,11 @@ class MainActivity : AppCompatActivity() {
                         .position(location.first)
                         .title(location.second)
                         .snippet(location.third)
+                        .icon(icon)
                 )
             }
 
         }
-    }
-    private fun addMarker(location: LatLng, title: String) {
-        maplibreMap.addMarker(
-            MarkerOptions()
-                .position(location)
-                .title(title)
-        )
     }
 
     override fun onStart() {
