@@ -3,8 +3,8 @@ package com.example.myapp016avanocniappka
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.LayoutInflater
+import androidx.core.content.res.ResourcesCompat
 import org.maplibre.android.MapLibre
-import org.maplibre.android.annotations.IconFactory
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
             maplibreMap.setStyle("https://demotiles.maplibre.org/style.json")
 
             maplibreMap.cameraPosition = CameraPosition.Builder()
-                .target(LatLng(54.5260, 15.2551)) // Center of Europe
+                .target(LatLng(54.5260, 15.2551))
                 .zoom(3.0)
                 .build()
 
@@ -52,7 +52,23 @@ class MainActivity : AppCompatActivity() {
                 Triple(LatLng(35.6895, 139.6917), "Hoteiosho", "Location: Tokyo, Japan"),
                 Triple(LatLng(48.1391, 8.1972), "Knecht Ruprecht", "Location: Black Forest, Germany"),
                 Triple(LatLng(52.5200, 13.4050), "Weihnachtsmann", "Location: Berlin, Germany"),
-                Triple(LatLng(59.3293, 18.0686), "Tomte", "Location: Stockholm, Sweden")
+                Triple(LatLng(59.3293, 18.0686), "Tomte", "Location: Stockholm, Sweden"),
+                Triple(LatLng(54.6872, 25.2797), "Kalėdų Senelis", "Location: Vilnius, Lithuania"),
+                Triple(LatLng(56.9496, 24.1052), "Ziemassvētku Vecītis", "Location: Riga, Latvia"),
+                Triple(LatLng(59.4370, 24.7536), "Jõuluvana", "Location: Tallinn, Estonia"),
+                Triple(LatLng(42.6977, 23.3219), "Дядо Коледа (Dyado Koleda)", "Location: Sofia, Bulgaria"),
+                Triple(LatLng(45.8150, 15.9819), "Djed Božićnjak", "Location: Zagreb, Croatia"),
+                Triple(LatLng(47.4979, 19.0402), "Mikulás", "Location: Budapest, Hungary"),
+                Triple(LatLng(44.7866, 20.4489), "Božić Bata", "Location: Belgrade, Serbia"),
+                Triple(LatLng(43.8563, 18.4131), "Djed Mraz", "Location: Sarajevo, Bosnia and Herzegovina"),
+                Triple(LatLng(42.0015, 21.4328), "Dedo Mraz", "Location: Skopje, North Macedonia"),
+                Triple(LatLng(41.3275, 19.8189), "Babadimri", "Location: Tirana, Albania"),
+                Triple(LatLng(46.7695, 23.5897), "Moș Crăciun", "Location: Cluj-Napoca, Romania"),
+                Triple(LatLng(45.9432, 24.9668), "Moș Nicolae", "Location: Sibiu, Romania"),
+                Triple(LatLng(46.0511, 14.5058), "Dedek Mraz", "Location: Ljubljana, Slovenia"),
+                Triple(LatLng(53.9006, 27.5590), "Дед Мороз (Ded Moroz)", "Location: Minsk, Belarus"),
+                Triple(LatLng(50.4501, 30.5234), "Святий Миколай (Svyatyy Mykolay)", "Location: Kyiv, Ukraine"),
+                Triple(LatLng(37.9838, 23.7275), "Άγιος Βασίλης (Agios Vasilis)", "Location: Athens, Greece")
             )
 
             for (location in santaLocations) {
